@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>無音カメラ</title>
+  <style>
+    video, canvas { width: 100%; }
+  </style>
+</head>
+<body>
+  <h1>無音カメラ</h1>
+  <video id="camera" autoplay playsinline></video>
+  <button id="shot">撮影</button>
+  <button id="save">保存</button>
+  <canvas id="photo"></canvas>
+
+  <script>
+    const video = document.getElementById("camera");
+    const canvas = document.getElementById("photo");
+    const button = document.getElementById("shot");
+    const saveButton = document.getElementById("save");
+
+    async function startCamera() {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" }
+      });
+      video.srcObject = stream;
+    }
+
+    function takePhoto() {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(video, 0, 0);
+    }
+
+    function savePhoto() {
+      const data = canvas.toDataURL("image/jpeg", 0.95);
+      const link = document.createElement("a");
+      link.href = data;
+      link.download = "slide_" + Date.now() + ".jpg";
+      link.click();
+    }
+
+    button.onclick = takePhoto;
+    saveButton.onclick = savePhoto;
+    startCamera();
+  </script>
+</body>
+</html>
