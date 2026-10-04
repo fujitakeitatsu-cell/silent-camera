@@ -13,6 +13,7 @@
   <video id="camera" autoplay playsinline></video>
   <button id="shot">撮影</button>
   <button id="save">保存</button>
+  <p id="info"></p>
   <canvas id="photo"></canvas>
 
   <script>
@@ -20,10 +21,15 @@
     const canvas = document.getElementById("photo");
     const button = document.getElementById("shot");
     const saveButton = document.getElementById("save");
+    const info = document.getElementById("info");
 
     async function startCamera() {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" }
+        video: {
+          facingMode: "environment",
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        }
       });
       video.srcObject = stream;
     }
@@ -33,6 +39,7 @@
       canvas.height = video.videoHeight;
       const ctx = canvas.getContext("2d");
       ctx.drawImage(video, 0, 0);
+      info.textContent = "写真の大きさ: " + canvas.width + "×" + canvas.height + " マス";
     }
 
     function savePhoto() {
