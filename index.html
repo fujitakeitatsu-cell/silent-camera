@@ -76,10 +76,8 @@
       try {
         const caps = await imageCapture.getPhotoCapabilities();
         const settings = {};
-        if (caps.imageWidth && caps.imageHeight) {
-          settings.imageWidth = caps.imageWidth.max;
-          settings.imageHeight = caps.imageHeight.max;
-        }
+      settings.imageWidth = 3264;
+settings.imageHeight = 2448;
         const blob = await imageCapture.takePhoto(settings);
         const bitmap = await createImageBitmap(blob);
         lastBlob = blob;
