@@ -5,23 +5,33 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>無音カメラ</title>
   <style>
-    video, canvas { width: 100%; }
+    video, canvas, img { width: 100%; }
   </style>
 </head>
 <body>
   <h1>無音カメラ</h1>
   <video id="camera" autoplay playsinline></video>
-  <button id="shot">撮影</button>
+  <button id="shot">撮影(映像から)</button>
+  <button id="hq">撮影(写真用)</button>
   <button id="save">保存</button>
   <p id="info"></p>
+  <p id="spec"></p>
   <canvas id="photo"></canvas>
+  <img id="preview" style="display:none">
 
   <script>
     const video = document.getElementById("camera");
     const canvas = document.getElementById("photo");
+    const preview = document.getElementById("preview");
     const button = document.getElementById("shot");
+    const hqButton = document.getElementById("hq");
     const saveButton = document.getElementById("save");
     const info = document.getElementById("info");
+    const spec = document.getElementById("spec");
+
+    let imageCapture = null;
+    let lastBlob = null;
+    let saveMode = "canvas";
 
     async function startCamera() {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -32,6 +42,19 @@
         }
       });
       video.srcObject = stream;
+
+      const track = stream.getVideoTracks()[0];
+      if ("ImageCapture" in window) {
+        imageCapture = new ImageCapture(track);
+        try {
+          const caps = await imageCapture.getPhotoCapabilities();
+          spec.textContent = "写真用の最大: " + caps.imageWidth.max + "×" + caps.imageHeight.max + " マス";
+        } catch (e) {
+          spec.textContent = "写真用の大きさは調べられませんでした";
+        }
+      } else {
+        spec.textContent = "このブラウザでは写真用の撮り方が使えません";
+      }
     }
 
     function takePhoto() {
@@ -39,18 +62,51 @@
       canvas.height = video.videoHeight;
       const ctx = canvas.getContext("2d");
       ctx.drawImage(video, 0, 0);
-      info.textContent = "写真の大きさ: " + canvas.width + "×" + canvas.height + " マス";
+      canvas.style.display = "block";
+      preview.style.display = "none";
+      saveMode = "canvas";
+      info.textContent = "映像から: " + canvas.width + "×" + canvas.height + " マス";
+    }
+
+    async function takePhotoHQ() {
+      if (!imageCapture) {
+        info.textContent = "写真用の撮り方は使えません";
+        return;
+      }
+      try {
+        const caps = await imageCapture.getPhotoCapabilities();
+        const settings = {};
+        if (caps.imageWidth && caps.imageHeight) {
+          settings.imageWidth = caps.imageWidth.max;
+          settings.imageHeight = caps.imageHeight.max;
+        }
+        const blob = await imageCapture.takePhoto(settings);
+        const bitmap = await createImageBitmap(blob);
+        lastBlob = blob;
+        saveMode = "blob";
+        preview.src = URL.createObjectURL(blob);
+        preview.style.display = "block";
+        canvas.style.display = "none";
+        info.textContent = "写真用: " + bitmap.width + "×" + bitmap.height + " マス / " + Math.round(blob.size / 1024) + " KB";
+      } catch (e) {
+        info.textContent = "写真用の撮影に失敗しました: " + e.message;
+      }
     }
 
     function savePhoto() {
-      const data = canvas.toDataURL("image/jpeg", 0.95);
       const link = document.createElement("a");
-      link.href = data;
-      link.download = "slide_" + Date.now() + ".jpg";
+      if (saveMode === "blob" && lastBlob) {
+        link.href = URL.createObjectURL(lastBlob);
+        link.download = "slide_hq_" + Date.now() + ".jpg";
+      } else {
+        link.href = canvas.toDataURL("image/jpeg", 0.95);
+        link.download = "slide_" + Date.now() + ".jpg";
+      }
       link.click();
     }
 
     button.onclick = takePhoto;
+    hqButton.onclick = takePhotoHQ;
     saveButton.onclick = savePhoto;
     startCamera();
   </script>
